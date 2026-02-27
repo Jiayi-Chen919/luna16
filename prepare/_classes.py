@@ -151,10 +151,10 @@ class PatchMaker(object):
         list_of_dicts = []
         for i in range(len(self._coords)):
             times_to_sample = 1
-            if radii[i] > 15.:
-                times_to_sample = 2
-            elif radii[i] > 20.:
+            if radii[i] > 20.:
                 times_to_sample = 6
+            elif radii[i] > 15.:
+                times_to_sample = 2
             for j in range(times_to_sample):
                 rot_id = int((j / times_to_sample) * 24 + np.random.randint(0, int(24 / times_to_sample)))
                 img, radii2, centers, lungs_bounding_box, spacing, existing_nodules_in_patch = \
