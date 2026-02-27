@@ -80,3 +80,18 @@ ANCHOR_SIZES = [10, 30, 60]
 VAL_PCT = 0.2
 TOTAL_EPOCHS = 100
 DEFAULT_LR = 0.01
+
+
+# -------- Augmentation sampling strategy (radius in mm) --------
+# For datasets where nodules are mostly small (e.g., radius 2-10mm),
+# increase sampling frequency for small nodules while still oversampling very large ones.
+AUG_SAMPLE_SMALL_RADIUS_MAX = 5.0
+AUG_SAMPLE_MEDIUM_RADIUS_MAX = 10.0
+AUG_SAMPLE_LARGE_RADIUS_MIN = 15.0
+AUG_SAMPLE_XL_RADIUS_MIN = 20.0
+
+AUG_SAMPLE_SMALL_TIMES = 4
+AUG_SAMPLE_MEDIUM_TIMES = 2
+AUG_SAMPLE_LARGE_TIMES = 3
+AUG_SAMPLE_XL_TIMES = 6
+AUG_SAMPLE_DEFAULT_TIMES = 1
