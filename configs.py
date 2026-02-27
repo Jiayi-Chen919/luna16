@@ -66,7 +66,7 @@ KFOLD_SPLITS = 5
 KFOLD_SEED = 2026
 
 # -------- Training options --------
-BATCH_SIZE = 1
+BATCH_SIZE = 2
 NUM_WORKERS = 0
 PIN_MEMORY = True
 PERSISTENT_WORKERS = False
