@@ -4,7 +4,12 @@ import SimpleITK as sitk
 import scipy
 from glob import glob
 from skimage.measure import regionprops
-from configs import OUTPUT_PATH, PREPROCESSED_SAVE_FORMAT, RESOURCES_PATH
+from configs import (AUG_SAMPLE_DEFAULT_TIMES, AUG_SAMPLE_LARGE_RADIUS_MIN,
+                     AUG_SAMPLE_LARGE_TIMES, AUG_SAMPLE_MEDIUM_RADIUS_MAX,
+                     AUG_SAMPLE_MEDIUM_TIMES, AUG_SAMPLE_SMALL_RADIUS_MAX,
+                     AUG_SAMPLE_SMALL_TIMES, AUG_SAMPLE_XL_RADIUS_MIN,
+                     AUG_SAMPLE_XL_TIMES, BLOCK_SIZE, OUTPUT_PATH,
+                     PREPROCESSED_SAVE_FORMAT, RESOURCES_PATH)
 from prepare.utility import get_augmented_cube, get_segmented_lungs
 
 class CTScan(object):
@@ -140,21 +145,32 @@ class PatchMaker(object):
         # >>> NII_GZ_AUTO_END
         self._clazz = clazz
         self._lungs_bounding_box = lungs_bounding_box
+        self._block_size = int(BLOCK_SIZE)
+
+    @staticmethod
+    def _get_times_to_sample(radius_mm: float) -> int:
+        # prioritize small nodules (common in many datasets) and very large nodules
+        if radius_mm > AUG_SAMPLE_XL_RADIUS_MIN:
+            return int(AUG_SAMPLE_XL_TIMES)
+        if radius_mm > AUG_SAMPLE_LARGE_RADIUS_MIN:
+            return int(AUG_SAMPLE_LARGE_TIMES)
+        if radius_mm <= AUG_SAMPLE_SMALL_RADIUS_MAX:
+            return int(AUG_SAMPLE_SMALL_TIMES)
+        if radius_mm <= AUG_SAMPLE_MEDIUM_RADIUS_MAX:
+            return int(AUG_SAMPLE_MEDIUM_TIMES)
+        return int(AUG_SAMPLE_DEFAULT_TIMES)
 
     def _get_augmented_patch(self, idx, rot_id=None):
         return get_augmented_cube(img=self._image, radii=self._radii, centers=self._coords,
                                   spacing=tuple(self._spacing), rot_id=rot_id, main_nodule_idx=idx,
-                                  lungs_bounding_box=self._lungs_bounding_box)
+                                  lungs_bounding_box=self._lungs_bounding_box,
+                                  block_size=self._block_size)
 
     def get_augmented_patches(self):
         radii = self._radii
         list_of_dicts = []
         for i in range(len(self._coords)):
-            times_to_sample = 1
-            if radii[i] > 15.:
-                times_to_sample = 2
-            elif radii[i] > 20.:
-                times_to_sample = 6
+            times_to_sample = self._get_times_to_sample(radii[i])
             for j in range(times_to_sample):
                 rot_id = int((j / times_to_sample) * 24 + np.random.randint(0, int(24 / times_to_sample)))
                 img, radii2, centers, lungs_bounding_box, spacing, existing_nodules_in_patch = \
