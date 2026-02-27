@@ -9,7 +9,8 @@ from configs import (AUG_SAMPLE_DEFAULT_TIMES, AUG_SAMPLE_LARGE_RADIUS_MIN,
                      AUG_SAMPLE_MEDIUM_TIMES, AUG_SAMPLE_SMALL_RADIUS_MAX,
                      AUG_SAMPLE_SMALL_TIMES, AUG_SAMPLE_XL_RADIUS_MIN,
                      AUG_SAMPLE_XL_TIMES, BLOCK_SIZE, OUTPUT_PATH,
-                     PREPROCESSED_SAVE_FORMAT, RESOURCES_PATH)
+                     PREPROCESSED_SAVE_FORMAT, PRESEGMENTED_BACKGROUND_VALUE,
+                     PRESEGMENTED_LUNG_INPUT, RESOURCES_PATH)
 from prepare.utility import get_augmented_cube, get_segmented_lungs
 
 class CTScan(object):
@@ -40,7 +41,10 @@ class CTScan(object):
 
     def preprocess(self):
         self._resample()
-        self._segment_lung_from_ct_scan()
+        if PRESEGMENTED_LUNG_INPUT:
+            self._use_presegmented_lung_mask()
+        else:
+            self._segment_lung_from_ct_scan()
         self._normalize()
         self._zero_center()
         self._change_coords()
@@ -62,7 +66,13 @@ class CTScan(object):
         (min_z, min_y, min_x, max_z, max_y, max_x) = (None, None, None, None, None, None)
         for region in regionprops(self._mask):
             min_z, min_y, min_x, max_z, max_y, max_x = region.bbox
-        assert (min_z, min_y, min_x, max_z, max_y, max_x) != (None, None, None, None, None, None)
+        if (min_z, min_y, min_x, max_z, max_y, max_x) == (None, None, None, None, None, None):
+            shape = self._image.shape
+            min_point = (0, 0, 0)
+            max_point = tuple(int(v) for v in shape)
+        else:
+            min_point = (min_z, min_y, min_x)
+            max_point = (max_z, max_y, max_x)
         min_point = (min_z, min_y, min_x)
         max_point = (max_z, max_y, max_x)
         output = {
@@ -87,6 +97,11 @@ class CTScan(object):
         imgs = scipy.ndimage.interpolation.zoom(imgs, resize_factor, mode='nearest')
         self._image = imgs
         self._spacing = true_spacing
+      
+    def _use_presegmented_lung_mask(self):
+        mask = self._image > float(PRESEGMENTED_BACKGROUND_VALUE)
+        self._mask = np.asarray(mask, dtype=int)
+         
 
     def _segment_lung_from_ct_scan(self):
         result_img = []
