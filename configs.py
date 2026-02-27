@@ -1,5 +1,5 @@
 # Directory used to save intermediate files, checkpoints, and metadata.
-OUTPUT_PATH = '/home/ai/Luna16-master/output'
+OUTPUT_PATH = '/home/ai/luna16-debug-flake8-errors/output'
 
 # Dataset root used in legacy LUNA16 mode (mhd/raw + annotations.csv/candidates.csv).
 RESOURCES_PATH = '/Users/mostafa/Desktop/dsb_analyse/input'
@@ -58,12 +58,17 @@ AUTO_ADD_NEGATIVE_CENTER_FROM_IMAGE = True
 # where image and mask filenames match (both .nii.gz).
 AUTO_GENERATE_MANIFEST_FROM_DIRS = True
 IMAGE_DIR = "/home/ai/nnDetection-main/nndet_data/Task010_lung/raw_splitted/imagesTr"
-LABEL_DIR = "/home/ai/nnDetection-main/nndet_data/Task010_lung/raw_splitted/labelsTr"
+LABEL_DIR = "/home/ai/luna16-debug-flake8-errors/labelsTr"
 MANIFEST_OUTPUT_DIR = None  
 
 # K-fold split settings used by manifest generation.
 KFOLD_SPLITS = 5
 KFOLD_SEED = 2026
+
+# If input volumes are already lung-masked (e.g., non-lung voxels set to -1024),
+# skip built-in lung segmentation and derive mask directly from intensity > threshold.
+PRESEGMENTED_LUNG_INPUT = False
+PRESEGMENTED_BACKGROUND_VALUE = -1024
 
 # -------- Training options --------
 BATCH_SIZE = 2
@@ -72,11 +77,11 @@ PIN_MEMORY = True
 PERSISTENT_WORKERS = False
 
 PADDING_FOR_LOCALIZATION = 10
-BLOCK_SIZE = 128
+BLOCK_SIZE = 64
 COORDS_CUBE_SIZE = 32
 TARGET_SHAPE = (COORDS_CUBE_SIZE, COORDS_CUBE_SIZE, COORDS_CUBE_SIZE, 3, 5)
 COORDS_SHAPE = (3, COORDS_CUBE_SIZE, COORDS_CUBE_SIZE, COORDS_CUBE_SIZE)
-ANCHOR_SIZES = [10, 30, 60]
+ANCHOR_SIZES = [2, 10, 30]
 VAL_PCT = 0.2
 TOTAL_EPOCHS = 100
 DEFAULT_LR = 0.01
