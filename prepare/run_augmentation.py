@@ -1,7 +1,7 @@
 from prepare._classes import PatchMaker
 import pandas as pd
 import os
-from configs import OUTPUT_PATH
+from configs import OUTPUT_PATH, PREPROCESSED_SAVE_FORMAT
 from ast import literal_eval
 
 
@@ -14,7 +14,10 @@ def _get_patches(record):
     radii = literal_eval(rec['radii'])
     clazz = int(rec['class'])
     file_directory = 'preprocessed/positives' if clazz == 1 else 'preprocessed/negatives'
-    file_path = f'{OUTPUT_PATH}/{file_directory}/{seriesuid}.npy'
+    # >>> NII_GZ_AUTO_START: read preprocessed inputs saved as npy/npz
+    extension = PREPROCESSED_SAVE_FORMAT.lower()
+    file_path = f'{OUTPUT_PATH}/{file_directory}/{seriesuid}.{extension}'
+    # >>> NII_GZ_AUTO_END
     pm = PatchMaker(seriesuid=seriesuid, coords=centers, radii=radii, spacing=spacing,
                     lungs_bounding_box=lungs_bounding_box,
                     file_path=file_path, clazz=clazz)
