@@ -46,3 +46,115 @@ Also, for more information, the dataset description is available [here](https://
 ### Using google colab
 The model has been trained in some small epochs by a [small sample](https://drive.google.com/file/d/1QOSRnUiwp08AFYOFgrCWJrEEEckZG1_0/view?usp=sharing) on google colab infrastructure.
 You could simply copy the data to your own Google Drive account and run [this notebook](./notebooks/Sample_of_training_process_with_google_colab.ipynb) to learn the procedure of training the model using google colab!
+
+
+## Training with custom `.nii.gz` datasets (industrial workflow)
+The preprocessing script now supports two modes:
+
+1. **Legacy LUNA16 mode** (default):
+   - Uses `RESOURCES_PATH/annotations.csv`, `RESOURCES_PATH/candidates.csv`, and `*.mhd` files.
+2. **Manifest mode** (recommended for production):
+   - Set `MANIFEST_PATH` in `configs.py` and provide a CSV with at least:
+     - `case_id`: unique case id
+     - `image_path`: path to image (`.nii.gz` / `.mhd`)
+     - `class`: `1` for positive, `0` for negative
+     - `centers`: Python-literal list of world-coordinate tuples `(z, y, x)`
+     - `radii`: Python-literal list of radii (mm)
+
+Example manifest row:
+
+```csv
+case_id,image_path,class,centers,radii,split,source_site
+case_0001,images/case_0001.nii.gz,1,"[(120.4, 256.0, 311.7)]","[4.5]",train,hospital_a
+```
+
+Then run exactly the same pipeline:
+
+```bash
+python prepare/run_preprocess.py
+python prepare/run_augmentation.py
+python main/train.py
+```
+
+### Recommended config updates for large-scale training
+- Set `BATCH_SIZE`, `NUM_WORKERS`, `PIN_MEMORY`, `PERSISTENT_WORKERS` in `configs.py`.
+- **Important**: training loop now iterates through all batches in an epoch (the previous single-batch debug break has been removed).
+- Keep split by case/series (already done in `main/train.py`) to avoid train/val leakage.
+
+
+### Auto-processing `.nii.gz` to `.npz`
+
+If you do not want to provide a manifest, you can enable automatic NIfTI discovery in `configs.py`:
+
+- `AUTO_DISCOVER_NIFTI_GZ = True`
+- `NIFTI_GLOB_PATTERN = "**/*.nii.gz"`
+- `PREPROCESSED_SAVE_FORMAT = "npz"`
+
+Then run:
+
+```bash
+python prepare/run_preprocess.py
+```
+
+The preprocessed scans will be saved under:
+- `OUTPUT_PATH/preprocessed/positives/*.npz`
+- `OUTPUT_PATH/preprocessed/negatives/*.npz`
+
+Each `.npz` stores the preprocessed 3D array under key `image`.
+
+
+### Using image + instance-mask (`.nii.gz` + `.nii.gz`)
+
+If your labels are instance masks (`0=background`, `1..N=each nodule instance`), you can let preprocess derive
+`class/centers/radii` automatically from `mask_path`.
+
+Manifest example:
+
+```csv
+case_id,image_path,mask_path,split
+case_0001,images/case_0001.nii.gz,masks/case_0001_mask.nii.gz,train
+case_0002,images/case_0002.nii.gz,masks/case_0002_mask.nii.gz,val
+```
+
+How it works:
+- For each instance id in `mask_path`, preprocess computes:
+  - center: centroid converted to world coordinate `(z,y,x)`
+  - radius: equivalent-sphere radius from instance voxel volume
+- If no instance exists, class is treated as negative (`class=0`).
+- For negative masks, optional `AUTO_ADD_NEGATIVE_CENTER_FROM_IMAGE=True` adds one synthetic center at image center so
+  negative patches can still be generated in augmentation.
+
+Related config fields:
+- `MASK_PATH_RELATIVE_TO_RESOURCES`
+- `AUTO_ADD_NEGATIVE_CENTER_FROM_IMAGE`
+- optional auto pairing in discovery mode: `AUTO_DISCOVER_MASK_SUFFIX`
+
+
+### Auto-generate manifest + 5-fold split from `image/` and `labels/`
+
+If your data is organized as:
+- `image/*.nii.gz`
+- `labels/*.nii.gz`
+
+and filenames match one-to-one, you can auto-generate manifests without manually writing CSV files.
+
+Set in `configs.py`:
+- `AUTO_GENERATE_MANIFEST_FROM_DIRS = True`
+- `IMAGE_DIR = "/path/to/image"`
+- `LABEL_DIR = "/path/to/labels"`
+- `KFOLD_SPLITS = 5`
+
+Then run:
+
+```bash
+python prepare/run_preprocess.py
+```
+
+Generated files (default: `OUTPUT_PATH/manifests`):
+- `manifest_all.csv`
+- `manifest_fold0.csv` ... `manifest_fold4.csv`
+- `manifest_fold0_train.csv` / `manifest_fold0_val.csv` ...
+- `manifest_summary.csv`
+
+Each generated row contains `case_id,image_path,mask_path` (and split columns for fold files).
+Preprocess will also continue and convert scans to preprocessed files (`.npz`/`.npy` per config).

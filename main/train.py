@@ -11,7 +11,8 @@ import itertools
 import pandas as pd
 from main.dataset import LunaDataSet
 from torch.utils.data import DataLoader
-from configs import VAL_PCT, TOTAL_EPOCHS, DEFAULT_LR, OUTPUT_PATH
+from configs import (BATCH_SIZE, DEFAULT_LR, NUM_WORKERS, OUTPUT_PATH,
+                     PERSISTENT_WORKERS, PIN_MEMORY, TOTAL_EPOCHS, VAL_PCT)
 from glob import glob
 
 
@@ -51,7 +52,6 @@ def train(data_loader, net, loss, epoch, optimizer, get_lr, save_dir='./models/'
 
         loss_output[0] = loss_output[0].item()
         metrics.append(loss_output)
-        break
     metrics = np.asarray(metrics, np.float32)
     if epoch % 10 == 0:
         net_state_dict = net.state_dict()
@@ -136,8 +136,18 @@ with learning rate starting from: {get_lr(starting_epoch)}, and loss: {initial_l
     train_indices = list(itertools.chain(*[list(i.values())[0] for i in list_of_groups[val_split:]]))
     ltd = LunaDataSet(train_indices, meta)
     lvd = LunaDataSet(val_indices, meta)
-    train_loader = DataLoader(ltd, batch_size=1, shuffle=False)
-    val_loader = DataLoader(lvd, batch_size=1, shuffle=False)
+    loader_kwargs = {
+        "batch_size": BATCH_SIZE,
+        "shuffle": False,
+        "num_workers": NUM_WORKERS,
+    }
+    if NUM_WORKERS > 0:
+        loader_kwargs["persistent_workers"] = PERSISTENT_WORKERS
+    if torch.cuda.is_available():
+        loader_kwargs["pin_memory"] = PIN_MEMORY
+
+    train_loader = DataLoader(ltd, **loader_kwargs)
+    val_loader = DataLoader(lvd, **loader_kwargs)
 
     for ep in range(starting_epoch, TOTAL_EPOCHS):
         train(train_loader, neural_net, loss_fn, ep, optim, get_lr, save_dir=save_dir)
