@@ -9,6 +9,12 @@ from skimage.measure import label, regionprops
 from skimage.morphology import convex_hull_image, disk, binary_closing
 from skimage.segmentation import clear_border
 
+def _safe_convex_hull_image(binary_image: np.ndarray) -> np.ndarray:
+    """Return convex hull only when foreground exists to avoid warning spam."""
+    if not np.any(binary_image):
+        return binary_image
+    return convex_hull_image(binary_image)
+    
 
 def argmax_3d(img: np.array):
     max1 = np.max(img, axis=0)
@@ -274,8 +280,8 @@ def get_segmented_lungs(im, plot=False):
 
     # Step 6: convex hull of each lung
     # image labels: 7, 8
-    rig = convex_hull_image(rig)
-    lef = convex_hull_image(lef)
+    rig = _safe_convex_hull_image(rig)
+    lef = _safe_convex_hull_image(lef)
     if plot:
         plots[plt_number].axis('off')
         plots[plt_number].set_title(f'{plt_number}')
@@ -315,4 +321,4 @@ def get_segmented_lungs(im, plot=False):
         plots[plt_number].imshow(im, cmap=plt.cm.bone)
         plt_number += 1
 
-    return im, convex_hull_image(binary)
+    return im, _safe_convex_hull_image(binary)
