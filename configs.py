@@ -1,5 +1,5 @@
 # Directory used to save intermediate files, checkpoints, and metadata.
-OUTPUT_PATH = '/Users/mostafa/PycharmProjects/Luna/prepare/tmp'
+OUTPUT_PATH = '/home/ai/Luna16-master/output'
 
 # Dataset root used in legacy LUNA16 mode (mhd/raw + annotations.csv/candidates.csv).
 RESOURCES_PATH = '/Users/mostafa/Desktop/dsb_analyse/input'
@@ -56,10 +56,10 @@ AUTO_ADD_NEGATIVE_CENTER_FROM_IMAGE = True
 # -------- Auto-manifest generation from image/label directories --------
 # Set these two paths to automatically build manifest CSVs for image/label pair datasets
 # where image and mask filenames match (both .nii.gz).
-AUTO_GENERATE_MANIFEST_FROM_DIRS = False
-IMAGE_DIR = None
-LABEL_DIR = None
-MANIFEST_OUTPUT_DIR = None  # default: OUTPUT_PATH/manifests
+AUTO_GENERATE_MANIFEST_FROM_DIRS = True
+IMAGE_DIR = "/home/ai/nnDetection-main/nndet_data/Task010_lung/raw_splitted/imagesTr"
+LABEL_DIR = "/home/ai/nnDetection-main/nndet_data/Task010_lung/raw_splitted/labelsTr"
+MANIFEST_OUTPUT_DIR = None  
 
 # K-fold split settings used by manifest generation.
 KFOLD_SPLITS = 5
