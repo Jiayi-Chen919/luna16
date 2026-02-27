@@ -4,7 +4,7 @@ import SimpleITK as sitk
 import scipy
 from glob import glob
 from skimage.measure import regionprops
-from configs import OUTPUT_PATH, PREPROCESSED_SAVE_FORMAT, RESOURCES_PATH
+from configs import BLOCK_SIZE, OUTPUT_PATH, PREPROCESSED_SAVE_FORMAT, RESOURCES_PATH
 from prepare.utility import get_augmented_cube, get_segmented_lungs
 
 class CTScan(object):
@@ -140,21 +140,23 @@ class PatchMaker(object):
         # >>> NII_GZ_AUTO_END
         self._clazz = clazz
         self._lungs_bounding_box = lungs_bounding_box
+        self._block_size = int(BLOCK_SIZE)
 
     def _get_augmented_patch(self, idx, rot_id=None):
         return get_augmented_cube(img=self._image, radii=self._radii, centers=self._coords,
                                   spacing=tuple(self._spacing), rot_id=rot_id, main_nodule_idx=idx,
-                                  lungs_bounding_box=self._lungs_bounding_box)
+                                  lungs_bounding_box=self._lungs_bounding_box,
+                                  block_size=self._block_size)
 
     def get_augmented_patches(self):
         radii = self._radii
         list_of_dicts = []
         for i in range(len(self._coords)):
             times_to_sample = 1
-            if radii[i] > 15.:
-                times_to_sample = 2
-            elif radii[i] > 20.:
+            if radii[i] > 20.:
                 times_to_sample = 6
+            elif radii[i] > 15.:
+                times_to_sample = 2
             for j in range(times_to_sample):
                 rot_id = int((j / times_to_sample) * 24 + np.random.randint(0, int(24 / times_to_sample)))
                 img, radii2, centers, lungs_bounding_box, spacing, existing_nodules_in_patch = \
