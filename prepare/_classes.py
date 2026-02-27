@@ -1,24 +1,36 @@
-import scipy.misc
+import os
 import numpy as np
 import SimpleITK as sitk
-from prepare.utility import get_segmented_lungs, get_augmented_cube
-from configs import RESOURCES_PATH, OUTPUT_PATH
+import scipy
 from glob import glob
 from skimage.measure import regionprops
-
+from configs import OUTPUT_PATH, PREPROCESSED_SAVE_FORMAT, RESOURCES_PATH
+from prepare.utility import get_augmented_cube, get_segmented_lungs
 
 class CTScan(object):
-    def __init__(self, seriesuid, centers, radii, clazz):
+    def __init__(self, seriesuid, centers, radii, clazz, image_path=None, extra_meta=None):
         self._seriesuid = seriesuid
         self._centers = centers
-        paths = glob(f'''{RESOURCES_PATH}/*/{self._seriesuid}.mhd''')
-        path = paths[0]
+        self._radii = radii
+        self._clazz = clazz
+        self._extra_meta = extra_meta or {}
+
+        if image_path is None:
+            paths = glob(f'''{RESOURCES_PATH}/*/{self._seriesuid}.mhd''')
+            if len(paths) == 0:
+                raise FileNotFoundError(f'Cannot find image file for seriesuid={seriesuid} under RESOURCES_PATH')
+            path = paths[0]
+        else:
+            path = image_path
+            if not os.path.isabs(path):
+                path = os.path.join(RESOURCES_PATH, path)
+
+        self._image_path = path
+        
         self._ds = sitk.ReadImage(path)
         self._spacing = np.array(list(reversed(self._ds.GetSpacing())))
         self._origin = np.array(list(reversed(self._ds.GetOrigin())))
         self._image = sitk.GetArrayFromImage(self._ds)
-        self._radii = radii
-        self._clazz = clazz
         self._mask = None
 
     def preprocess(self):
@@ -30,8 +42,16 @@ class CTScan(object):
 
     def save_preprocessed_image(self):
         subdir = 'negatives' if self._clazz == 0 else 'positives'
-        file_path = f'''preprocessed/{subdir}/{self._seriesuid}.npy'''
-        np.save(f'{OUTPUT_PATH}/{file_path}', self._image)
+        extension = PREPROCESSED_SAVE_FORMAT.lower()
+        if extension not in {'npy', 'npz'}:
+            raise ValueError(f'Unsupported PREPROCESSED_SAVE_FORMAT: {PREPROCESSED_SAVE_FORMAT}')
+        file_path = f'''preprocessed/{subdir}/{self._seriesuid}.{extension}'''
+        full_path = f'{OUTPUT_PATH}/{file_path}'
+        if extension == 'npz':
+            np.savez_compressed(full_path, image=self._image)
+        else:
+            np.save(full_path, self._image)
+        # >>> NII_GZ_AUTO_END
 
     def get_info_dict(self):
         (min_z, min_y, min_x, max_z, max_y, max_x) = (None, None, None, None, None, None)
@@ -40,8 +60,17 @@ class CTScan(object):
         assert (min_z, min_y, min_x, max_z, max_y, max_x) != (None, None, None, None, None, None)
         min_point = (min_z, min_y, min_x)
         max_point = (max_z, max_y, max_x)
-        return {'seriesuid': self._seriesuid, 'radii': self._radii, 'centers': self._centers,
-                'spacing': list(self._spacing), 'lungs_bounding_box': [min_point, max_point], 'class': self._clazz}
+        output = {
+        'seriesuid': self._seriesuid,
+        'radii': self._radii,
+        'centers': self._centers,
+        'spacing': list(self._spacing),
+        'lungs_bounding_box': [min_point, max_point],
+        'class': self._clazz,
+        'image_path': self._image_path,
+    }
+        output.update(self._extra_meta)
+        return output
 
     def _resample(self):
         spacing = np.array(self._spacing, dtype=np.float32)
@@ -101,7 +130,14 @@ class PatchMaker(object):
         self._coords = coords
         self._spacing = spacing
         self._radii = radii
-        self._image = np.load(file=f'{file_path}')
+        # >>> NII_GZ_AUTO_START: read both npy and npz preprocessed files
+        loaded = np.load(file=f'{file_path}')
+        if isinstance(loaded, np.lib.npyio.NpzFile):
+            self._image = loaded['image']
+            loaded.close()
+        else:
+            self._image = loaded
+        # >>> NII_GZ_AUTO_END
         self._clazz = clazz
         self._lungs_bounding_box = lungs_bounding_box
 
