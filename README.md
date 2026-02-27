@@ -37,11 +37,17 @@ The `LunaDataSet` class in `main/dataset.py`, loads the saved augmented data to 
 Also, for more information, the dataset description is available [here](https://luna16.grand-challenge.org/data/).
 2. Change the first 2 variables in `configs.py` file
 
-3. Run `prepare/run_preprocess.py`
+3. Run `python -m prepare.run_preprocess`
 
-4. Run `prepare/run_augmentation.py`
+4. Run `python -m prepare.run_augmentation`
 
-5. Run `main/train.py`
+5. Run `python -m main.train`
+
+> Tip: Prefer module-style commands (e.g., `python -m prepare.run_preprocess`) to avoid `ModuleNotFoundError: configs` caused by script-path imports.
+
+> ⚠️ If you ever see `ModuleNotFoundError: configs`, do **not** install `configs` from PyPI.
+> This project expects the local `configs.py` file in the repo root; just run commands from the repo and prefer `python -m ...`.
+
 
 ### Using google colab
 The model has been trained in some small epochs by a [small sample](https://drive.google.com/file/d/1QOSRnUiwp08AFYOFgrCWJrEEEckZG1_0/view?usp=sharing) on google colab infrastructure.
@@ -70,9 +76,9 @@ case_0001,images/case_0001.nii.gz,1,"[(120.4, 256.0, 311.7)]","[4.5]",train,hosp
 Then run exactly the same pipeline:
 
 ```bash
-python prepare/run_preprocess.py
-python prepare/run_augmentation.py
-python main/train.py
+python -m prepare.run_preprocess
+python -m prepare.run_augmentation
+python -m main.train
 ```
 
 ### Recommended config updates for large-scale training
@@ -92,7 +98,7 @@ If you do not want to provide a manifest, you can enable automatic NIfTI discove
 Then run:
 
 ```bash
-python prepare/run_preprocess.py
+python -m prepare.run_preprocess
 ```
 
 The preprocessed scans will be saved under:
@@ -146,7 +152,7 @@ Set in `configs.py`:
 Then run:
 
 ```bash
-python prepare/run_preprocess.py
+python -m prepare.run_preprocess
 ```
 
 Generated files (default: `OUTPUT_PATH/manifests`):
