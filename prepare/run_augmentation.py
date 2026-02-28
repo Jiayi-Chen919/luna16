@@ -7,7 +7,7 @@ if PROJECT_ROOT not in sys.path:
     
 from prepare._classes import PatchMaker
 import pandas as pd
-from configs import OUTPUT_PATH, PREPROCESSED_SAVE_FORMAT
+from configs import AUG_SKIP_EXISTING, OUTPUT_PATH, PREPROCESSED_SAVE_FORMAT
 from ast import literal_eval
 
 
@@ -33,8 +33,12 @@ def _get_patches(record):
 def save_augmented_data(preprocess_meta):
     [os.makedirs(d, exist_ok=True) for d in
      [f'{OUTPUT_PATH}/augmented/positives', f'{OUTPUT_PATH}/augmented/negatives']]
-    augmentation_meta = pd.DataFrame(columns=['seriesuid', 'sub_index', 'centers', 'lungs_bounding_box', 'radii',
-                                              'class'])
+    existing_meta_path = f'{OUTPUT_PATH}/augmented_meta.csv'
+    if AUG_SKIP_EXISTING and os.path.exists(existing_meta_path):
+        augmentation_meta = pd.read_csv(existing_meta_path, index_col=0)
+    else:
+        augmentation_meta = pd.DataFrame(columns=['seriesuid', 'sub_index', 'centers', 'lungs_bounding_box', 'radii',
+                                                  'class'])
     list_of_positives = []
     list_of_negatives = []
     for rec in preprocess_meta.loc[preprocess_meta['class'] == 1].iloc:
@@ -44,8 +48,11 @@ def save_augmented_data(preprocess_meta):
         # 33 percent of the data will be negative samples
         if len(list_of_negatives) > len(list_of_positives) / 2:
             break
-    augmentation_meta = augmentation_meta.append(list_of_positives + list_of_negatives)
-    augmentation_meta.to_csv(f'{OUTPUT_PATH}/augmented_meta.csv')
+    new_meta = pd.DataFrame(list_of_positives + list_of_negatives)
+    if not new_meta.empty:
+        augmentation_meta = pd.concat([augmentation_meta, new_meta], ignore_index=True)
+        augmentation_meta = augmentation_meta.drop_duplicates(subset=['seriesuid', 'sub_index', 'class'], keep='first')
+    augmentation_meta.to_csv(existing_meta_path)
 
 
 if __name__ == '__main__':
