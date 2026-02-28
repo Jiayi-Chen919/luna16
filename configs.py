@@ -100,3 +100,8 @@ AUG_SAMPLE_MEDIUM_TIMES = 2
 AUG_SAMPLE_LARGE_TIMES = 3
 AUG_SAMPLE_XL_TIMES = 6
 AUG_SAMPLE_DEFAULT_TIMES = 1
+
+
+# If True, augmentation will skip writing cubes that already exist on disk.
+# Useful when resuming interrupted runs or re-running augmentation incrementally.
+AUG_SKIP_EXISTING = True
