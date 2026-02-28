@@ -73,10 +73,11 @@ def random_crop(img: np.array, centers: list, lungs_bounding_box: list, radii: l
     shifts = []
     for i in range(len(centers[main_nodule_idx])):
         high = int(block_size / 2) - max_radius_index - margin
-        if high < 0:
-            print('negative high!!!')
-            high = 0
-        shift = np.random.randint(low=-abs(high), high=abs(high))
+        if high <= 0:
+            # nodule nearly fills the patch; keep center fixed on this axis
+            shift = 0
+        else:
+            shift = np.random.randint(low=-high, high=high)
         center_of_cube[i] += shift
         shifts.append(shift)
     out_img = _get_cube_from_img_new(img, origin=tuple(center_of_cube), block_size=block_size, pad_value=pad_value)
