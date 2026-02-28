@@ -8,7 +8,7 @@ from configs import (AUG_SAMPLE_DEFAULT_TIMES, AUG_SAMPLE_LARGE_RADIUS_MIN,
                      AUG_SAMPLE_LARGE_TIMES, AUG_SAMPLE_MEDIUM_RADIUS_MAX,
                      AUG_SAMPLE_MEDIUM_TIMES, AUG_SAMPLE_SMALL_RADIUS_MAX,
                      AUG_SAMPLE_SMALL_TIMES, AUG_SAMPLE_XL_RADIUS_MIN,
-                     AUG_SAMPLE_XL_TIMES, BLOCK_SIZE, OUTPUT_PATH,
+                     AUG_SAMPLE_XL_TIMES, AUG_SKIP_EXISTING, BLOCK_SIZE, OUTPUT_PATH,
                      PREPROCESSED_SAVE_FORMAT, PRESEGMENTED_BACKGROUND_VALUE,
                      PRESEGMENTED_LUNG_INPUT, RESOURCES_PATH)
 from prepare.utility import get_augmented_cube, get_segmented_lungs
@@ -183,18 +183,22 @@ class PatchMaker(object):
     def get_augmented_patches(self):
         radii = self._radii
         list_of_dicts = []
+        subdir = 'negatives' if self._clazz == 0 else 'positives'
         for i in range(len(self._coords)):
             times_to_sample = self._get_times_to_sample(radii[i])
             for j in range(times_to_sample):
                 rot_id = int((j / times_to_sample) * 24 + np.random.randint(0, int(24 / times_to_sample)))
+                file_path = f'augmented/{subdir}/{self._seriesuid}_{i}_{j}.npy'
+                full_file_path = f'{OUTPUT_PATH}/{file_path}'
+                if AUG_SKIP_EXISTING and os.path.exists(full_file_path):
+                    continue
                 img, radii2, centers, lungs_bounding_box, spacing, existing_nodules_in_patch = \
                     self._get_augmented_patch(idx=i, rot_id=rot_id)
                 existing_radii = [radii2[i] for i in existing_nodules_in_patch]
                 existing_centers = [centers[i] for i in existing_nodules_in_patch]
-                subdir = 'negatives' if self._clazz == 0 else 'positives'
-                file_path = f'''augmented/{subdir}/{self._seriesuid}_{i}_{j}.npy'''
+                
                 list_of_dicts.append(
                     {'seriesuid': self._seriesuid, 'centers': existing_centers, 'sub_index': f'{i}_{j}',
                      'lungs_bounding_box': lungs_bounding_box, 'radii': existing_radii, 'class': self._clazz})
-                np.save(f'{OUTPUT_PATH}/{file_path}', img)
+                np.save(full_file_path, img)
         return list_of_dicts
