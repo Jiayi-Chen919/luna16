@@ -163,3 +163,20 @@ Generated files (default: `OUTPUT_PATH/manifests`):
 
 Each generated row contains `case_id,image_path,mask_path` (and split columns for fold files).
 Preprocess will also continue and convert scans to preprocessed files (`.npz`/`.npy` per config).
+
+
+### Quick visual QA for label alignment (random 2 samples)
+
+After preprocess + augmentation, you can generate sanity-check figures to verify labels did not drift:
+
+```bash
+python -m prepare.inspect_alignment \
+  --manifest /home/ai/luna16-debug-flake8-errors/output/manifests/manifest_all.csv \
+  --samples 2 \
+  --out-dir /home/ai/luna16-debug-flake8-errors/output/debug_vis
+```
+
+For each sampled `seriesuid`, one PNG is produced with 3 panels:
+- raw image + raw mask
+- preprocessed volume (`.npz/.npy`) + mask resampled to 1mm
+- augmented patch + augmented labels (projected circle on a slice)
